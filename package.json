@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "munkres-js": "^1.2.2"
+  }
+}

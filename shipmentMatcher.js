@@ -1,4 +1,5 @@
 const fs = require('fs');
+const munkres = require('munkres-js');
 const gcd = (a, b) => {
     while (b != 0) {
         let t = b;
@@ -24,34 +25,20 @@ const assignDriversToAddressesOptimized = (drivers, addresses) => {
             if (gcd(driverLength, addressLength) > 1) {
                 baseScore *= 1.5;
             }
-            driverScores.push(baseScore);
+            driverScores.push(1000 - baseScore);
         };
         scoresMatrix.push(driverScores);
     };
 
-    const usedDrivers = new Set();
-    const usedAddresses = new Set();
-    const assignments = [];
+    const assignments = munkres(scoresMatrix);
     let totalScore = 0;
+    const detailedAssignments = assignments.map(([driverIndex, addressIndex]) => {
+        const score = 1000 - scoresMatrix[driverIndex][addressIndex]; // Convert back to original score
+        totalScore += score;
+        return { driver: drivers[driverIndex], address: addresses[addressIndex], score };
+    });
 
-    for (let i = 0; i < drivers.length; i++) {
-        let bestScore = -1;
-        let bestPair = null;
-        for (let j = 0; j < addresses.length; j++) {
-            if (!usedDrivers.has(i) && !usedAddresses.has(j) && scoresMatrix[i][j] > bestScore) {
-                bestScore = scoresMatrix[i][j];
-                bestPair = { driverIndex: i, addressIndex: j, score: bestScore };
-            }
-        }
-        if (bestPair) {
-            usedDrivers.add(bestPair.driverIndex);
-            usedAddresses.add(bestPair.addressIndex);
-            assignments.push({ driver: drivers[bestPair.driverIndex], address: addresses[bestPair.addressIndex], score: bestPair.score });
-            totalScore += bestPair.score;
-        }
-    }
-
-    return { totalScore, assignments };
+    return { totalScore, detailedAssignments };
 }
 
 const streetFile = process.argv[2];
@@ -65,6 +52,6 @@ const drivers = fs.readFileSync(driverFile, 'utf8').split('\n');
 const result = assignDriversToAddressesOptimized(drivers, addresses);
 console.log(`Total Suitability Score: ${result.totalScore}`);
 console.log('Assignments:');
-result.assignments.forEach(({ driver, address, score }) => {
+result.detailedAssignments.forEach(({ driver, address, score }) => {
     console.log(`${driver} -> ${address} (Score: ${score})`);
 });
